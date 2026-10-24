@@ -39,24 +39,25 @@ export async function updateSession(request: NextRequest) {
   })
 
   const { data } = await supabase.auth.getClaims()
-  const isLoginRoute = request.nextUrl.pathname.startsWith('/login')
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
+  const pathname = request.nextUrl.pathname
+  const isLoginRoute = pathname.startsWith('/login')
+  const isAuthRoute = pathname.startsWith('/auth')
 
+  // Protect private pages from signed-out visitors.
   if (!data?.claims && !isLoginRoute && !isAuthRoute) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/login'
-    redirectUrl.searchParams.set('next', request.nextUrl.pathname)
+    redirectUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (data?.claims && isLoginRoute) {
-    const redirectUrl = request.nextUrl.clone()
-    const next = request.nextUrl.searchParams.get('next')
-    redirectUrl.pathname =
-      next?.startsWith('/') && !next.startsWith('//') ? next : '/'
-    redirectUrl.search = ''
-    return NextResponse.redirect(redirectUrl)
-  }
-
+  // Allow signed-in users to open /login and choose Sign up or Sign in.
+  // Do not redirect them automatically to the dashboard.
   return response
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 }
